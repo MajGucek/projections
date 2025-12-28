@@ -7,6 +7,7 @@ module Math.Vector (
     normalize
 ) where
 
+
 data Vector = Vector {
     x :: Float,
     y :: Float,
@@ -35,7 +36,7 @@ infixl 7 ⛶
 
 normalize :: Vector -> Vector
 normalize v = 
-    let norm = sqrt(x v ^ 2 + y v ^ 2 + z v ^ 2)
+    let norm = sqrt(x v ** 2 + y v ** 2 + z v ** 2)
     in if norm < 1e-6
         then Vector 0 0 1
         else 

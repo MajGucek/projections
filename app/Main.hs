@@ -6,12 +6,12 @@
 module Main(main) where
 
 import Graphics.Gloss hiding (Vector)
-import Graphics.Gloss.Interface.IO.Game (Event)
+import Graphics.Gloss.Interface.IO.Game
 
 import MathLib
 import VisualLib
 import Cube
-    
+
 
 
 data WorldState = WorldState {
@@ -24,6 +24,7 @@ data WorldState = WorldState {
 initialState :: WorldState
 initialState = WorldState {
     cubes = [
+        createCube (Vector (-50) (-50) 50) (Vector 50 50 150),
         createCube (Vector (-50) (-50) 50) (Vector 50 50 150)
     ],
     focalLength = 1000,
@@ -33,7 +34,7 @@ initialState = WorldState {
 
 
 render :: WorldState -> Picture
-render state = 
+render state =
         {- 
         for each cube applyTransf
         then getFaces for each cube :t [ [[Vector]] ]
@@ -46,26 +47,40 @@ render state =
         in pictures $
             map (fColor . polygon . map (fst . project (focalLength state))) culled
 
-    
+
 
 update :: Float -> WorldState -> WorldState
-update dt state = 
+update dt state =
     let speed = pi / 2
         t = time state + dt
-        transformation = Transformation {
-            translation = Vector (500 * sin t) (500 * cos t) 0,
-            rotation = makeRotationQuat (speed * dt) (Vector 0 1 0),
-            scaling = Vector 1 1 1
-        }
+        transformations = [
+            Transformation {
+                translation = Vector (- (500 * cos t)) (500 * sin t) 0,
+                rotation = makeRotationQuat (speed * t) (Vector 0 1 0),
+                scaling = Vector 1 1 1
+            },
+            Transformation {
+                translation = Vector (500 * cos t) (500 * sin t) 0,
+                rotation = makeRotationQuat (speed * t) (Vector 1 0 0),
+                scaling = Vector (sin t) 1 1
+            }
+            ]
+        cubes' = zipWith setTransform transformations (cubes state)
     in state {
-        cubes = map (setTransform transformation) (cubes state),
+        cubes = cubes',
         time = t
     }
 
 handleInput :: Event -> WorldState -> WorldState
-handleInput _event state = state
-
-
+handleInput (EventKey (SpecialKey KeyDown) Down _ _) state =
+    state {
+        focalLength = clampFocalLength $ focalLength state + 100
+    }
+handleInput (EventKey (SpecialKey KeyUp) Down _ _) state =
+    state {
+        focalLength = clampFocalLength $ focalLength state - 100
+    }
+handleInput _ state = state
 
 fps :: Int
 fps = 165
