@@ -9,9 +9,9 @@ module Math.Vector (
 
 
 data Vector = Vector {
-    x :: Float,
-    y :: Float,
-    z :: Float
+    x :: !Float,
+    y :: !Float,
+    z :: !Float
 } deriving Show
 
 

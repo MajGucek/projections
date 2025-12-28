@@ -6,10 +6,10 @@ module Math.Quaternion (
 ) where
 
 data Quaternion = Quaternion {
-    r :: Float,
-    i :: Float,
-    j :: Float,
-    k :: Float
+    r :: !Float,
+    i :: !Float,
+    j :: !Float,
+    k :: !Float
 } deriving Show
 
 

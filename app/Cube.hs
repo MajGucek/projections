@@ -17,14 +17,14 @@ module Cube (
 import MathLib
 
 data Transformation = Transformation {
-    translation :: Vector,
-    rotation :: Quaternion,
-    scaling :: Vector
+    translation :: !Vector,
+    rotation :: !Quaternion,
+    scaling :: !Vector
 } deriving Show
 
 data Cube = Cube {
     vertices :: [Vector],
-    transform :: Transformation
+    transform :: !Transformation
 } deriving Show
 
 createCube :: Vector -> Vector -> Cube

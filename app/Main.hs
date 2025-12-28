@@ -60,9 +60,9 @@ update dt state =
                 scaling = Vector 1 1 1
             },
             Transformation {
-                translation = Vector (500 * cos t) (500 * sin t) 0,
+                translation = Vector (200 * cos t) (200 * sin t) (600 * sin t),
                 rotation = makeRotationQuat (speed * t) (Vector 1 0 0),
-                scaling = Vector (sin t) 1 1
+                scaling = Vector (2 + cos t) 1 1
             }
             ]
         cubes' = zipWith setTransform transformations (cubes state)
@@ -83,6 +83,6 @@ handleInput (EventKey (SpecialKey KeyUp) Down _ _) state =
 handleInput _ state = state
 
 fps :: Int
-fps = 165
+fps = 240
 main :: IO ()
 main = play window background fps initialState render handleInput update
