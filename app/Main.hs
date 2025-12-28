@@ -5,20 +5,8 @@
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 module Main(main) where
 
-import Graphics.Gloss
-    ( black,
-      white,
-      circleSolid,
-      color,
-      translate,
-      animate,
-      polygon,
-      pictures,
-      Display(FullScreen),
-      Color,
-      Picture,
-      Point
-    )
+import Graphics.Gloss hiding (Vector)
+import Graphics.Gloss.Data.ViewPort (ViewPort)
 
 window :: Display
 window = FullScreen --Gloss
@@ -29,13 +17,6 @@ background = black --Gloss
 fColor :: Picture -> Picture
 fColor p = 
     color white p
-
-
-
-drawPoint :: (Point, Float) -> Picture
-drawPoint (p, scale) = 
-    fColor $ 
-        uncurry translate p $ circleSolid scale
 
 
 focalLength :: Float
@@ -142,25 +123,25 @@ infixl 7 ⟳
 p ⟳ q = q *** p *** conjugate q
 
 
-translateCube :: Cube -> Vector -> Cube
-translateCube cube translation = 
+translateCube :: Vector -> Cube -> Cube
+translateCube translation cube = 
     onVertices (+++ translation) cube
 
 
 localTransform :: (Cube -> Cube) -> Cube -> Cube
 localTransform f cube =
     let cube_origin_vector = getCubeOriginCoord cube
-        cube' = translateCube cube $ opposite cube_origin_vector
+        cube' = translateCube (opposite cube_origin_vector) cube
         cube'' = f cube'
-    in translateCube cube'' cube_origin_vector
+    in translateCube cube_origin_vector cube'' 
 
 
-rotateCube :: Cube -> Quaternion -> Cube
-rotateCube cube rotation = 
+rotateCube :: Quaternion -> Cube -> Cube
+rotateCube rotation cube = 
     localTransform (onVertices (quatToPoint . (⟳ rotation) . pointToQuat)) cube
 
-scaleCube :: Cube -> Vector -> Cube
-scaleCube cube scale =
+scaleCube :: Vector -> Cube -> Cube
+scaleCube scale cube =
     localTransform (onVertices (⛶ scale)) cube
 
 
@@ -178,11 +159,14 @@ makeRotationQuat angle v =
 normalize :: Vector -> Vector
 normalize v = 
     let norm = sqrt(x v ^ 2 + y v ^ 2 + z v ^ 2)
-    in Vector {
-        x = x v / norm,
-        y = y v / norm,
-        z = z v / norm
-    }
+    in if norm < 1e-6
+        then Vector 0 0 1
+        else 
+            Vector {
+                x = x v / norm,
+                y = y v / norm,
+                z = z v / norm
+            }
 
 
     
@@ -190,6 +174,10 @@ normalize v =
 
 data WorldState = WorldState {
     myCube :: Cube,
+    translation :: Vector,
+    rotation :: Quaternion,
+    scaling :: Vector,
+    time :: Float,
     name :: String
 } deriving Show
 
@@ -201,47 +189,64 @@ initialState = WorldState {
             Vector { x = 50, y = -50, z = 50 },
             Vector { x = 50, y = 50, z = 50 },
             Vector { x = -50, y = 50, z =  50 },
-
             Vector { x = -50, y = -50, z = 150 },
             Vector { x = 50, y = -50, z = 150 },
             Vector { x = 50, y = 50, z = 150 },
             Vector { x = -50, y = 50, z = 150 }
         ]
     },
+    translation = Vector 0 0 0,
+    rotation = Quaternion 1 0 0 0,
+    scaling = Vector 1 1 1,
+    time = 0,
     name = "ID"
 }
+
+checkCulling :: Vector -> Bool
+checkCulling v = 
+    z v + focalLength > 1
+
+applyTransformations :: WorldState -> Cube
+applyTransformations state =
+        (
+        translateCube (translation state) .
+        rotateCube (rotation state) .
+        scaleCube (scaling state)
+        ) 
+            (myCube state)
+
 
 
 
 render :: WorldState -> Picture
 render state =
-    let faces = getFaces $ myCube state -- v :: [[Vector]]
-
+    let faces = getFaces $ applyTransformations state
+        culledFaces = filter (all checkCulling) faces
     in pictures $
-        map (fColor . polygon . map simpleProject) faces 
-            
-        
-        --map (drawPoint . project) $ vertices $ myCube state 
+        map (fColor . polygon . map simpleProject) culledFaces
     
 
 
 makeStep :: Float -> WorldState -> WorldState
 makeStep dt state = 
     let speed = pi / 2
-    in state { 
-        myCube = scaleCube
-            (
-                rotateCube 
-                (myCube state) $
-                makeRotationQuat (speed * dt) Vector {x = 1, y = 1, z = sin dt }
-            )
-            Vector {x = sin dt / 5 + 2, y = cos dt / 5 + 2, z = sin dt / 5 + 2}
+        t = time state + dt
+        deltaRotation = makeRotationQuat (speed * dt) (Vector 0 1 0)
+        deltaTranslate = Vector (sin t) 0 0
+        deltaScale = Vector 0 0 0
+    in state {
+        translation = deltaTranslate +++ translation state,
+        rotation = deltaRotation *** rotation state,
+        scaling = deltaScale +++ scaling state,
+        time = t
     }
     
-
+fps :: Int
+fps = 165
 
 main :: IO ()
-main = animate window background frame
-    where 
-        frame :: Float -> Picture
-        frame seconds = render $ makeStep seconds initialState
+main = simulate window background fps initialState render update
+
+
+update :: ViewPort -> Float -> WorldState -> WorldState
+update _ = makeStep
