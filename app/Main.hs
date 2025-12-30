@@ -15,17 +15,17 @@ import Cube
 
 
 data WorldState = WorldState {
-    cubes :: [Cube],
+    shapes :: [AnyShape],
     focalLength :: Float,
     time :: Float,
     name :: String
-} deriving Show
+}
 
 initialState :: WorldState
 initialState = WorldState {
-    cubes = [
-        createCube (Vector (-50) (-50) 50) (Vector 50 50 150),
-        createCube (Vector (-50) (-50) 50) (Vector 50 50 150)
+    shapes = [
+        AnyShape (createCube (Vector (-50) (-50) 50) (Vector 50 50 150)),
+        AnyShape (createCube (Vector (-50) (-50) 50) (Vector 50 50 150))
     ],
     focalLength = 1000,
     time = 0,
@@ -35,17 +35,15 @@ initialState = WorldState {
 
 render :: WorldState -> Picture
 render state =
-        {- 
-        for each cube applyTransf
-        then getFaces for each cube :t [ [[Vector]] ]
-            for each face is [Vector], cube has 6 faces, and i have n-cubes so triple vector
-        then for each face checkCulling, then make it a polygon and color it
-        at the end collect and give into picture
-        -}
-        let t = concatMap (getFaces . applyTransformations) (cubes state) -- :t [[Vector]]
-            culled = filter (checkFaceCulling $ focalLength state) t -- :t [[Vector]]
-        in pictures $
-            map (fColor . polygon . map (fst . project (focalLength state))) culled
+    pictures
+        $ map (fColor . polygon . map (project $ focalLength state))
+        $ concatMap 
+            (withShape $
+            filter (checkFaceCulling $ focalLength state) .
+            map fromTriangle .
+            toMesh .
+            applyTransformations
+            ) (shapes state)
 
 
 
@@ -65,9 +63,16 @@ update dt state =
                 scaling = Vector (2 + cos t) 1 1
             }
             ]
-        cubes' = zipWith setTransform transformations (cubes state)
     in state {
-        cubes = cubes',
+        --setTransform :: Transformation -> a -> a
+        shapes = 
+            zipWith 
+                (\transform shape -> withShape (AnyShape . setTransform transform) shape)
+                --Ok so, lambda takes current transformation and shape
+                -- and does setTransform on concrete type (withShape)
+                -- to current_transform and then rewraps back into AnyShape
+                -- AnyShape . setTransform
+                transformations (shapes state),
         time = t
     }
 
