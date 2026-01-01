@@ -8,7 +8,8 @@ module MathLib (
     Triangle,
     Shape(..),
     AnyShape(..),
-    withShape,
+    updateShape,
+    concreteShape,
     pointToQuat,
     quatToPoint,
     makeRotationQuat,
@@ -54,9 +55,11 @@ type Triangle = (Vector, Vector, Vector)
 
 data AnyShape = forall a. Shape a => AnyShape a
 
-withShape :: (forall a. Shape a => a -> b) -> AnyShape -> b
-withShape f (AnyShape s) = f s
+updateShape :: (forall a. Shape a => a -> a) -> AnyShape -> AnyShape
+updateShape f (AnyShape s) = AnyShape (f s)
 
+concreteShape :: (forall a. Shape a => a -> b) -> AnyShape -> b
+concreteShape f (AnyShape s) = f s
 
 class Shape a where
     onVertices :: (Vector -> Vector) -> a -> a

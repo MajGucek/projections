@@ -49,12 +49,10 @@ instance Shape Cube where
                 map (v !!) [0, 7, 4]
             ]
   
-  
-  
 
 
-createCube :: Vector -> Vector -> Cube
-createCube (Vector sx sy sz) (Vector ex ey ez) =
+createCube :: (Vector, Vector) -> Cube
+createCube (Vector sx sy sz, Vector ex ey ez) =
     Cube {
         vertices = [
             Vector sx sy sz,
@@ -74,20 +72,7 @@ createCube (Vector sx sy sz) (Vector ex ey ez) =
         }
     } 
 
-{-
-getFaces :: Cube -> [[Vector]]
-getFaces cube = 
-    let v = vertices cube
-    in 
-    [
-        map (v !!) [0, 1, 2, 3], -- bottom
-        map (v !!) [4, 5, 6, 7], -- top
-        map (v !!) [0, 1, 5, 4], -- back
-        map (v !!) [2, 3, 7, 6], -- front
-        map (v !!) [1, 2, 6, 5], -- right
-        map (v !!) [0, 3, 7, 4]  -- left
-    ]
--}
+
 
 
 

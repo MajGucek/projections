@@ -11,7 +11,7 @@ import Graphics.Gloss.Interface.IO.Game
 import MathLib
 import VisualLib
 import Cube
-
+import Pyramid
 
 
 data WorldState = WorldState {
@@ -24,8 +24,9 @@ data WorldState = WorldState {
 initialState :: WorldState
 initialState = WorldState {
     shapes = [
-        AnyShape (createCube (Vector (-50) (-50) 50) (Vector 50 50 150)),
-        AnyShape (createCube (Vector (-50) (-50) 50) (Vector 50 50 150))
+        AnyShape (createCube (Vector (-50) (-50) 50, Vector 50 50 150)),
+        AnyShape (createCube (Vector (-50) (-50) 50, Vector 50 50 150)),
+        AnyShape (createPyramid (Vector 0 0 100, 100, 100))
     ],
     focalLength = 1000,
     time = 0,
@@ -38,12 +39,23 @@ render state =
     pictures
         $ map (fColor . polygon . map (project $ focalLength state))
         $ concatMap 
+        (
+            filter (checkFaceCulling $ focalLength state) .
+            map fromTriangle .
+            concreteShape (
+                toMesh .
+                applyTransformations
+                )
+        ) (shapes state)
+        {-
             (withShape $
             filter (checkFaceCulling $ focalLength state) .
             map fromTriangle .
             toMesh .
             applyTransformations
             ) (shapes state)
+-}
+
 
 
 
@@ -61,13 +73,18 @@ update dt state =
                 translation = Vector (200 * cos t) (200 * sin t) (600 * sin t),
                 rotation = makeRotationQuat (speed * t) (Vector 1 0 0),
                 scaling = Vector (2 + cos t) 1 1
+            },
+            Transformation {
+                translation = Vector 0 0 (400 * sin t),
+                rotation = makeRotationQuat (speed * t) (Vector 1 0.5 1),
+                scaling = Vector 1 1 1
             }
             ]
     in state {
         --setTransform :: Transformation -> a -> a
         shapes = 
             zipWith 
-                (\transform shape -> withShape (AnyShape . setTransform transform) shape)
+                (\transform shape -> updateShape (setTransform transform) shape)
                 --Ok so, lambda takes current transformation and shape
                 -- and does setTransform on concrete type (withShape)
                 -- to current_transform and then rewraps back into AnyShape
